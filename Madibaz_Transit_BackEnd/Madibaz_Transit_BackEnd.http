@@ -1,0 +1,6 @@
+@Madibaz_Transit_BackEnd_HostAddress = http://localhost:5155
+
+GET {{Madibaz_Transit_BackEnd_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
