@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Madibaz_Transit_BackEnd")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1097e21d717c2fb525d441efa7af4cd0c4abf5fe")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3ba92ab7d00ad35ede1061425202e414c045c8a2")]
 [assembly: System.Reflection.AssemblyProductAttribute("Madibaz_Transit_BackEnd")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Madibaz_Transit_BackEnd")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
