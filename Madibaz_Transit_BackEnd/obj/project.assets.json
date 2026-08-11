@@ -4549,11 +4549,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Sibusiso\\Downloads\\Madibaz_Transit\\Madibaz_Transit_BackEnd\\Madibaz_Transit_BackEnd.csproj",
+      "projectUniqueName": "C:\\Users\\Sibusiso\\source\\repos\\Madibaz_Transit\\Madibaz_Transit_BackEnd\\Madibaz_Transit_BackEnd.csproj",
       "projectName": "Madibaz_Transit_BackEnd",
-      "projectPath": "C:\\Users\\Sibusiso\\Downloads\\Madibaz_Transit\\Madibaz_Transit_BackEnd\\Madibaz_Transit_BackEnd.csproj",
+      "projectPath": "C:\\Users\\Sibusiso\\source\\repos\\Madibaz_Transit\\Madibaz_Transit_BackEnd\\Madibaz_Transit_BackEnd.csproj",
       "packagesPath": "C:\\Users\\Sibusiso\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Sibusiso\\Downloads\\Madibaz_Transit\\Madibaz_Transit_BackEnd\\obj\\",
+      "outputPath": "C:\\Users\\Sibusiso\\source\\repos\\Madibaz_Transit\\Madibaz_Transit_BackEnd\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
