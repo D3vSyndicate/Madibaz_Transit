@@ -16,27 +16,43 @@ namespace Madibaz_Transit_BackEnd.Data
 
         public DbSet<GPSCoordinateHistory> GPSCoordinateHistories { get; set; }
 
+        public DbSet<Bus> Buses { get; set; }
+
+        public DbSet<Driver> Drivers { get; set; }
+        public DbSet<TransitRoute> TransitRoute {get; set; }
+        public DbSet<BusStop> BusStops { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            base.OnModelCreating(modelBuilder);
+
             modelBuilder.Entity<BusLocation>()
-                .Property(b => b.Latitude)
+                .Property(x => x.Latitude)
                 .HasPrecision(10, 7);
 
             modelBuilder.Entity<BusLocation>()
-                .Property(b => b.Longitude)
+                .Property(x => x.Longitude)
                 .HasPrecision(10, 7);
 
             modelBuilder.Entity<BusLocation>()
-                .Property(b => b.Heading)
-                .HasPrecision(10, 2);
+                .Property(x => x.Heading)
+                .HasPrecision(6, 2);
 
             modelBuilder.Entity<GPSCoordinateHistory>()
-                .Property(g => g.Latitude)
+                .Property(x => x.Latitude)
                 .HasPrecision(10, 7);
 
             modelBuilder.Entity<GPSCoordinateHistory>()
-                .Property(g => g.Longitude)
+                .Property(x => x.Longitude)
+                .HasPrecision(10, 7);
+
+            modelBuilder.Entity<BusStop>()
+                .Property(x => x.Latitude)
+                .HasPrecision(10, 7);
+
+            modelBuilder.Entity<BusStop>()
+                .Property(x => x.Longitude)
                 .HasPrecision(10, 7);
         }
+        
     }
 }

@@ -4,6 +4,7 @@ using Madibaz_Transit_BackEnd.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Madibaz_Transit_BackEnd.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260814192657_AddBus")]
+    partial class AddBus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -69,8 +72,8 @@ namespace Madibaz_Transit_BackEnd.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Heading")
-                        .HasPrecision(6, 2)
-                        .HasColumnType("decimal(6,2)");
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<DateTime>("LastUpdated")
                         .HasColumnType("datetime2");
@@ -86,73 +89,6 @@ namespace Madibaz_Transit_BackEnd.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("BusLocations");
-                });
-
-            modelBuilder.Entity("Madibaz_Transit_BackEnd.Models.Entities.BusStop", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<decimal>("Latitude")
-                        .HasPrecision(10, 7)
-                        .HasColumnType("decimal(10,7)");
-
-                    b.Property<decimal>("Longitude")
-                        .HasPrecision(10, 7)
-                        .HasColumnType("decimal(10,7)");
-
-                    b.Property<string>("StopName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("StopOrder")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("BusStops");
-                });
-
-            modelBuilder.Entity("Madibaz_Transit_BackEnd.Models.Entities.Driver", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("EmployeeNumber")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PhoneNumber")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Drivers");
                 });
 
             modelBuilder.Entity("Madibaz_Transit_BackEnd.Models.Entities.DriverShift", b =>
@@ -212,34 +148,6 @@ namespace Madibaz_Transit_BackEnd.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("GPSCoordinateHistories");
-                });
-
-            modelBuilder.Entity("Madibaz_Transit_BackEnd.Models.Entities.TransitRoute", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("RouteCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RouteName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("TransitRoute");
                 });
 #pragma warning restore 612, 618
         }
