@@ -24,6 +24,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // ---- ADDED: register JwtTokenService so AuthController can use it
 builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddHostedService<BookingExpiryService>();
 
 // ---- ADDED: configure how the app validates the JWTs it issues itself.
 // This is what makes [Authorize] and [Authorize(Roles = "...")] actually
