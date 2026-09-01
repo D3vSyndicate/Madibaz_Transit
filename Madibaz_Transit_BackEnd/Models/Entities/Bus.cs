@@ -2,7 +2,7 @@
 {
     public class Bus
     {
-        public int Id { get; set; }
+        public int BusId { get; set; }
 
         public string RegistrationNumber { get; set; } = string.Empty;
 

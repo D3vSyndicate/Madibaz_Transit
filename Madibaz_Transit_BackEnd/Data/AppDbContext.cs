@@ -21,6 +21,7 @@ namespace Madibaz_Transit_BackEnd.Data
         public DbSet<Driver> Drivers { get; set; }
         public DbSet<TransitRoute> TransitRoute {get; set; }
         public DbSet<BusStop> BusStops { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
