@@ -2,7 +2,7 @@
 {
     public class TransitRoute
     {
-        public int Id { get; set; }
+        public Guid TransitRouteId { get; set; }
 
         public string RouteName { get; set; } = string.Empty;
 
