@@ -3,6 +3,7 @@
 namespace Madibaz_Transit_BackEnd.Models.Entities
 {
 
+
     public class DriverShift
     {
         public Guid DriverShiftId { get; set; }
@@ -18,12 +19,14 @@ namespace Madibaz_Transit_BackEnd.Models.Entities
         public DateTime? ShiftEnd { get; set; }
 
         [Required]
-        public Status ShiftStatus { get; set; } 
+        public ShiftStatus ShiftStatus { get; set; }
     }
 
-    public enum Status
-    {
-        Active,Ended
-    }
+  public enum ShiftStatus
+{
+    Active,
+    Ended
+}
+
 }
 
