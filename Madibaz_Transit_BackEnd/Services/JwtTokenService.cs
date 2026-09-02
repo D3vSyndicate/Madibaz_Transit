@@ -25,9 +25,12 @@ namespace Madibaz_Transit_BackEnd.Services
 
         public string GenerateToken(AppUser user)
         {
-            var signingKey = _config["AppJwt:SigningKey"]!;
-            var issuer = _config["AppJwt:Issuer"]!;
-            var audience = _config["AppJwt:Audience"]!;
+            var signingKey = _config["AppJwt:SigningKey"]
+                ?? throw new InvalidOperationException("AppJwt:SigningKey is missing from appsettings.json");
+            var issuer = _config["AppJwt:Issuer"]
+                ?? throw new InvalidOperationException("AppJwt:Issuer is missing from appsettings.json");
+            var audience = _config["AppJwt:Audience"]
+                ?? throw new InvalidOperationException("AppJwt:Audience is missing from appsettings.json");
             var expiryMinutes = int.Parse(_config["AppJwt:ExpiryMinutes"] ?? "60");
 
             var claims = new List<Claim>

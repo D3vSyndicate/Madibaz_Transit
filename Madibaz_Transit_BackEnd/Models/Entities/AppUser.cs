@@ -28,6 +28,13 @@ namespace Madibaz_Transit_BackEnd.Models.Entities
         // one — leave it empty for those rather than forcing a fake value.
         public string? StudentNumber { get; set; }
 
+        // Self-service "forgot password" support — a random token is
+        // generated and stored here (hashed) when forgot-password is
+        // requested, then checked and cleared when reset-password is
+        // used. Both null when no reset is in progress.
+        public string? PasswordResetTokenHash { get; set; }
+        public DateTime? PasswordResetTokenExpiresAt { get; set; }
+
         // e.g. "s256964895@mandela.ac.za"
         public string Email { get; set; } = string.Empty;
 

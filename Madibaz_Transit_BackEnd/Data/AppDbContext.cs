@@ -23,6 +23,7 @@ namespace Madibaz_Transit_BackEnd.Data
         public DbSet<BusStop> BusStops { get; set; }
 
         public DbSet<AppUser> Users { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
