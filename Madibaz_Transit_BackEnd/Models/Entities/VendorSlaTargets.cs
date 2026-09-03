@@ -2,5 +2,6 @@
 {
     public class VendorSlaTargets
     {
+        public Guid VendorSlaTargetId { get; set; }
     }
 }
