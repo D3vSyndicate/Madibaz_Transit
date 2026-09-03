@@ -7,17 +7,12 @@ namespace Madibaz_Transit_BackEnd.Models.Entities
     public class DriverShift
     {
         public Guid DriverShiftId { get; set; }
-
-        public int DriverId { get; set; }
-
-        public int BusId { get; set; }
-
-        public int RouteId { get; set; }
-
+        public Guid DriverId { get; set; }
+        public Guid BusId { get; set; }
+        public Guid RouteId { get; set; }
+        public Guid ScheduleId { get; set; }
         public DateTime ShiftStart { get; set; }
-
         public DateTime? ShiftEnd { get; set; }
-
         [Required]
         public ShiftStatus ShiftStatus { get; set; }
     }

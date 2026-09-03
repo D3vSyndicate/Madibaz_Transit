@@ -6,9 +6,9 @@
         public Guid DriverShiftId { get; set; }
         public Guid TransitRouteId { get; set; }
         public Guid BusId { get; set; }
-        public DriverShift DriverShift { get; set; }
-        public TransitRoute TransitRoute { get; set; }
-        public Bus Bus { get; set; }
+        public required DriverShift DriverShift { get; set; }
+        public required TransitRoute TransitRoute { get; set; }
+        public required Bus Bus { get; set; }
         public required string Status { get; set; }
         public required string ScheduledStart { get; set; }
         public required string ActualStart { get; set; }

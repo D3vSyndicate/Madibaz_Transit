@@ -34,6 +34,7 @@ namespace Madibaz_Transit_BackEnd.Data
             {
                 new AppUser { StudentNumber = "s256964895", Email = "s256964895@mandela.ac.za",   FullName = "Thabo Nkosi",    Role = UserRole.Student,        PlainPassword = "abcdef12" },
                 new AppUser { StudentNumber = "s221345678", Email = "s221345678@mandela.ac.za",   FullName = "Aisha Patel",    Role = UserRole.Student,        PlainPassword = "ghijkl34" },
+                new AppUser { StudentNumber = "s224473131", Email = "s224473131@mandela.ac.za",   FullName = "Sibusiso Nxumalo",    Role = UserRole.Student,        PlainPassword = "sibusiso" },
                 new AppUser { StudentNumber = null,         Email = "john.botha@quantumshuttle.co.za",   FullName = "John Botha",     Role = UserRole.Driver,        PlainPassword = "mnopqr56" },
                 new AppUser { StudentNumber = null,         Email = "lindiwe.zulu@mandela.ac.za",        FullName = "Lindiwe Zulu",   Role = UserRole.Marshal,       PlainPassword = "stuvwx78" },
                 new AppUser { StudentNumber = null,         Email = "admin.transport@mandela.ac.za",     FullName = "You (Admin)",    Role = UserRole.Admin,         PlainPassword = "adminpw12" },

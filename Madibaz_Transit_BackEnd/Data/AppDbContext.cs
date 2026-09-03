@@ -14,10 +14,10 @@ namespace Madibaz_Transit_BackEnd.Data
         public DbSet<DriverShift> DriverShifts { get; set; }
         public DbSet<GPSCoordinateHistory> GPSCoordinateHistories { get; set; }
         public DbSet<Bus> Buses { get; set; }
-        public DbSet<Driver> Drivers { get; set; }
         public DbSet<TransitRoute> TransitRoute { get; set; }
         public DbSet<BusStop> BusStops { get; set; }
         public DbSet<AppUser> Users { get; set; }
+        public DbSet<AppUser> Drivers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -2,5 +2,7 @@
 {
     public class GeneratedReports
     {
+        public Guid GeneratedReportsId { get; set; }
+
     }
 }
