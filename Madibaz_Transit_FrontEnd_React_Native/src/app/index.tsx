@@ -1,98 +1,196 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+
+import { useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+export default function LoginScreen() {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
+    const handleLogin = async () => {
+        if (!email.trim() || !password) {
+            Alert.alert(
+                'Missing information',
+                'Please enter your email and password.'
+            );
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            // API connection will be added after the screen is working.
+            console.log('Login:', email);
+        } catch {
+            Alert.alert(
+                'Login failed',
+                'Something went wrong. Please try again.'
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
+        <SafeAreaView style={styles.safeArea}>
+            <View style={styles.container}>
+
+                <View style={styles.header}>
+                    <Text style={styles.title}>MADIBA TRANSIT</Text>
+                    <Text style={styles.subtitle}>
+                        Nelson Mandela University
+                    </Text>
+                </View>
+
+                <View style={styles.form}>
+                    <Text style={styles.heading}>Student Login</Text>
+
+                    <Text style={styles.label}>University Email</Text>
+
+                    <TextInput
+                        style={styles.input}
+                        placeholder="student@mandela.ac.za"
+                        placeholderTextColor="#777777"
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        value={email}
+                        onChangeText={setEmail}
+                    />
+
+                    <Text style={styles.label}>Password</Text>
+
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Enter your password"
+                        placeholderTextColor="#777777"
+                        secureTextEntry
+                        value={password}
+                        onChangeText={setPassword}
+                    />
+
+                    <Pressable
+                        style={({ pressed }) => [
+                            styles.loginButton,
+                            pressed && styles.buttonPressed,
+                        ]}
+                        onPress={handleLogin}
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                            <Text style={styles.loginButtonText}>
+                                LOGIN
+                            </Text>
+                        )}
+                    </Pressable>
+                </View>
+
+                <Text style={styles.footer}>
+                    Nelson Mandela University
+                </Text>
+
+            </View>
+        </SafeAreaView>
     );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
-
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
-  );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+    },
+
+    container: {
+        flex: 1,
+        paddingHorizontal: 28,
+        paddingVertical: 40,
+        justifyContent: 'space-between',
+    },
+
+    header: {
+        alignItems: 'center',
+        marginTop: 50,
+    },
+
+    title: {
+        fontSize: 28,
+        fontWeight: '700',
+        color: '#002855',
+        textAlign: 'center',
+    },
+
+    subtitle: {
+        marginTop: 8,
+        fontSize: 15,
+        color: '#555555',
+        textAlign: 'center',
+    },
+
+    form: {
+        width: '100%',
+    },
+
+    heading: {
+        fontSize: 24,
+        fontWeight: '600',
+        color: '#002855',
+        marginBottom: 28,
+    },
+
+    label: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#333333',
+        marginBottom: 8,
+    },
+
+    input: {
+        height: 52,
+        borderWidth: 1,
+        borderColor: '#CCCCCC',
+        borderRadius: 10,
+        paddingHorizontal: 16,
+        fontSize: 16,
+        color: '#111111',
+        backgroundColor: '#FFFFFF',
+        marginBottom: 20,
+    },
+
+    loginButton: {
+        height: 52,
+        borderRadius: 10,
+        backgroundColor: '#002855',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 8,
+        borderBottomWidth: 4,
+        borderBottomColor: '#F2C500',
+    },
+
+    buttonPressed: {
+        opacity: 0.8,
+    },
+
+    loginButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '700',
+    },
+
+    footer: {
+        textAlign: 'center',
+        fontSize: 13,
+        color: '#777777',
+    },
 });

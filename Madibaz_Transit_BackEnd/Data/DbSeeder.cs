@@ -32,7 +32,8 @@ namespace Madibaz_Transit_BackEnd.Data
             //   even though they use the same login FORM right now.
             var seedUsers = new[]
             {
-                new AppUser { StudentNumber = "s256964895", Email = "s256964895@mandela.ac.za",   FullName = "Thabo Nkosi",    Role = UserRole.Student,        PlainPassword = "abcdef12" },
+                new AppUser { StudentNumber = "s256964895", Email = "
+                ",   FullName = "Thabo Nkosi",    Role = UserRole.Student,        PlainPassword = "abcdef12" },
                 new AppUser { StudentNumber = "s221345678", Email = "s221345678@mandela.ac.za",   FullName = "Aisha Patel",    Role = UserRole.Student,        PlainPassword = "ghijkl34" },
                 new AppUser { StudentNumber = null,         Email = "john.botha@quantumshuttle.co.za",   FullName = "John Botha",     Role = UserRole.Driver,        PlainPassword = "mnopqr56" },
                 new AppUser { StudentNumber = null,         Email = "lindiwe.zulu@mandela.ac.za",        FullName = "Lindiwe Zulu",   Role = UserRole.Marshal,       PlainPassword = "stuvwx78" },
