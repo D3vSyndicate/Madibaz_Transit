@@ -18,6 +18,7 @@ namespace Madibaz_Transit_BackEnd.Data
         public DbSet<TransitRoute> TransitRoute { get; set; }
         public DbSet<BusStop> BusStops { get; set; }
         public DbSet<AppUser> Users { get; set; }
+        public DbSet<ComplainTickets> ComplainTickets { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
