@@ -20,113 +20,168 @@ namespace Madibaz_Transit_BackEnd.Controllers
             _db = db;
         }
 
-        // Create a booking
+        // Create a booking or join the queue
         [HttpPost]
         public async Task<IActionResult> CreateBooking(CreateBookingDto dto)
         {
-            var userId = int.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
+            var userId = GetUserId();
 
-            var trip = await _db.ScheduledTrips
+            var trip = await _db.Trips
                 .Include(t => t.Bus)
                 .Include(t => t.TransitRoute)
-                .FirstOrDefaultAsync(t => t.Id == dto.ScheduledTripId);
+                .FirstOrDefaultAsync(t => t.TripId == dto.TripId);
 
-            if (trip == null || !trip.IsActive)
-                return NotFound("Scheduled trip not found.");
+            if (trip == null)
+                return NotFound("Trip not found.");
+
+            if (trip.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) ||
+                trip.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest("This trip is no longer available for booking.");
+            }
 
             // New bookings close 15 minutes before departure.
-            if (trip.DepartureTime <= DateTime.UtcNow.AddMinutes(15))
+            if (trip.ScheduledStart <= DateTime.UtcNow.AddMinutes(15))
             {
                 return BadRequest(
-                    "Bookings are closed because this shuttle departs in less than 15 minutes."
-                );
+                    "Bookings are closed because this shuttle departs in less than 15 minutes.");
             }
 
-            // A student cannot have another active booking or
-            // queue position for the same trip.
-            var existingBooking = await _db.Bookings
-                .AnyAsync(b =>
-                    b.AppUserId == userId &&
-                    b.ScheduledTripId == dto.ScheduledTripId &&
-                    (b.Status == "Confirmed" || b.Status == "Queued"));
+            // Check for an existing reservation.
+            var existingReservation = await _db.SeatReservations
+                .AnyAsync(r =>
+                    r.AppUserId == userId &&
+                    r.TripId == dto.TripId &&
+                    (r.Status == ReservationStatus.Pending ||
+                     r.Status == ReservationStatus.Confirmed ||
+                     r.Status == ReservationStatus.Boarded));
 
-            if (existingBooking)
+            // Check for an existing queue entry.
+            var existingQueueEntry = await _db.ActiveQueues
+                .AnyAsync(q =>
+                    q.AppUserId == userId &&
+                    q.TripId == dto.TripId &&
+                    q.Status == QueueEntryStatus.Waiting);
+
+            if (existingReservation || existingQueueEntry)
             {
                 return Conflict(
-                    "You already have a booking or queue position for this trip."
-                );
+                    "You already have a booking or queue position for this trip.");
             }
 
-            var confirmedBookings = await _db.Bookings
-                .CountAsync(b =>
-                    b.ScheduledTripId == dto.ScheduledTripId &&
-                    b.Status == "Confirmed");
+            // Count confirmed reservations.
+            var confirmedBookings = await _db.SeatReservations
+                .CountAsync(r =>
+                    r.TripId == dto.TripId &&
+                    (r.Status == ReservationStatus.Pending ||
+                     r.Status == ReservationStatus.Confirmed));
 
-            string status;
-            string? boardingToken = null;
-
-            // If there is space, confirm the booking.
+            // There is still space.
             if (confirmedBookings < trip.Bus.Capacity)
             {
-                status = "Confirmed";
-                boardingToken = Guid.NewGuid().ToString("N");
-            }
-            // Otherwise place the student in the queue.
-            else
-            {
-                status = "Queued";
+                var reservation = new SeatReservations
+                {
+                    AppUserId = userId,
+                    TripId = dto.TripId,
+                    Status = ReservationStatus.Confirmed,
+                    ConfirmedAt = DateTime.UtcNow,
+                    BoardingToken = Guid.NewGuid(),
+                    BoardingTokenUsed = false
+                };
+
+                _db.SeatReservations.Add(reservation);
+
+                await _db.SaveChangesAsync();
+
+                return Ok(await BuildBookingDto(
+                    reservation.Id,
+                    userId));
             }
 
-            var booking = new Booking
+            // Bus is full, so add student to the queue.
+            var queuePosition = await _db.ActiveQueues
+                .CountAsync(q =>
+                    q.TripId == dto.TripId &&
+                    q.Status == QueueEntryStatus.Waiting) + 1;
+
+            var queueEntry = new ActiveQueues
             {
                 AppUserId = userId,
-                ScheduledTripId = dto.ScheduledTripId,
-                CreatedAt = DateTime.UtcNow,
-                Status = status,
-                BoardingToken = boardingToken,
-                AttendanceConfirmed = false
+                TripId = dto.TripId,
+                Position = queuePosition,
+                JoinedAt = DateTime.UtcNow,
+                Status = QueueEntryStatus.Waiting
             };
 
-            _db.Bookings.Add(booking);
+            _db.ActiveQueues.Add(queueEntry);
 
             await _db.SaveChangesAsync();
 
-            return Ok(
-                await BuildBookingDto(
-                    booking.Id,
-                    userId
-                )
-            );
+            return Ok(new
+            {
+                Id = queueEntry.Id,
+                TripId = queueEntry.TripId,
+                Status = "Queued",
+                QueuePosition = queueEntry.Position,
+                CreatedAt = queueEntry.JoinedAt,
+                RouteName = trip.TransitRoute.RouteName,
+                RouteCode = trip.TransitRoute.RouteCode,
+                DepartureTime = trip.ScheduledStart
+            });
         }
 
         // Get all bookings belonging to the logged-in student
         [HttpGet("my")]
         public async Task<IActionResult> GetMyBookings()
         {
-            var userId = int.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
+            var userId = GetUserId();
 
-            var bookings = await _db.Bookings
-                .Where(b => b.AppUserId == userId)
-                .OrderByDescending(b => b.CreatedAt)
+            var reservations = await _db.SeatReservations
+                .Include(r => r.Trip)
+                    .ThenInclude(t => t.TransitRoute)
+                .Where(r => r.AppUserId == userId)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            var queueEntries = await _db.ActiveQueues
+                .Include(q => q.Trip)
+                    .ThenInclude(t => t.TransitRoute)
+                .Where(q =>
+                    q.AppUserId == userId &&
+                    q.Status == QueueEntryStatus.Waiting)
+                .OrderByDescending(q => q.JoinedAt)
                 .ToListAsync();
 
             var result = new List<BookingDto>();
 
-            foreach (var booking in bookings)
+            foreach (var reservation in reservations)
             {
-                result.Add(
-                    await BuildBookingDto(
-                        booking.Id,
-                        userId
-                    )
-                );
+                result.Add(await BuildBookingDto(
+                    reservation.Id,
+                    userId));
             }
 
-            return Ok(result);
+            foreach (var queue in queueEntries)
+            {
+                result.Add(new BookingDto
+                {
+                    Id = queue.Id,
+                    TripId = queue.TripId,
+                    RouteName = queue.Trip.TransitRoute.RouteName,
+                    RouteCode = queue.Trip.TransitRoute.RouteCode,
+                    DepartureTime = queue.Trip.ScheduledStart,
+                    Status = "Queued",
+                    BoardingToken = Guid.Empty.ToString(),
+                    CreatedAt = queue.JoinedAt,
+                    QueuePosition = queue.Position,
+                    AttendanceConfirmed = false,
+                    ConfirmationRequired = false
+                });
+            }
+
+            return Ok(result
+                .OrderByDescending(x => x.CreatedAt)
+                .ToList());
         }
 
         // Confirm whether the student is still coming.
@@ -134,126 +189,115 @@ namespace Madibaz_Transit_BackEnd.Controllers
         // before departure until 15 minutes before departure.
         [HttpPost("{id}/confirm-attendance")]
         public async Task<IActionResult> ConfirmAttendance(
-            int id,
+            Guid id,
             ConfirmAttendanceDto dto)
         {
-            var userId = int.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
+            var userId = GetUserId();
 
-            var booking = await _db.Bookings
-                .Include(b => b.ScheduledTrip)
-                .FirstOrDefaultAsync(b =>
-                    b.Id == id &&
-                    b.AppUserId == userId);
+            var reservation = await _db.SeatReservations
+                .Include(r => r.Trip)
+                .FirstOrDefaultAsync(r =>
+                    r.Id == id &&
+                    r.AppUserId == userId);
 
-            if (booking == null)
+            if (reservation == null)
                 return NotFound("Booking not found.");
 
-            if (booking.Status != "Confirmed")
+            if (reservation.Status != ReservationStatus.Confirmed)
             {
                 return BadRequest(
-                    "Only confirmed bookings can confirm attendance."
-                );
+                    "Only confirmed bookings can confirm attendance.");
             }
 
-            var departureTime = booking.ScheduledTrip.DepartureTime;
+            var departureTime = reservation.Trip.ScheduledStart;
             var now = DateTime.UtcNow;
 
-            var confirmationStart =
-                departureTime.AddMinutes(-30);
-
-            var confirmationEnd =
-                departureTime.AddMinutes(-15);
+            var confirmationStart = departureTime.AddMinutes(-30);
+            var confirmationEnd = departureTime.AddMinutes(-15);
 
             if (now < confirmationStart)
             {
                 return BadRequest(
-                    "Attendance confirmation is not available yet."
-                );
+                    "Attendance confirmation is not available yet.");
             }
 
             if (now >= confirmationEnd)
             {
                 return BadRequest(
-                    "The attendance confirmation period has ended."
-                );
+                    "The attendance confirmation period has ended.");
             }
 
             // Student says they are NOT coming.
             if (!dto.IsComing)
             {
-                booking.Status = "Cancelled";
-                booking.BoardingToken = null;
-                booking.AttendanceConfirmed = false;
+                reservation.Status = ReservationStatus.Cancelled;
+                reservation.CancelledAt = now;
 
-                await PromoteNextStudent(
-                    booking.ScheduledTripId
-                );
+                await PromoteNextStudent(reservation.TripId);
 
                 await _db.SaveChangesAsync();
 
                 return Ok(new
                 {
-                    Message =
-                        "Your booking has been cancelled."
+                    Message = "Your booking has been cancelled."
                 });
             }
 
             // Student confirms that they ARE coming.
-            booking.AttendanceConfirmed = true;
+            reservation.ConfirmedAt = now;
 
             await _db.SaveChangesAsync();
 
-            return Ok(
-                await BuildBookingDto(
-                    booking.Id,
-                    userId
-                )
-            );
+            return Ok(await BuildBookingDto(
+                reservation.Id,
+                userId));
         }
 
         // Cancel a booking or queue position
         [HttpDelete("{id}")]
-        public async Task<IActionResult> CancelBooking(int id)
+        public async Task<IActionResult> CancelBooking(Guid id)
         {
-            var userId = int.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
+            var userId = GetUserId();
 
-            var booking = await _db.Bookings
-                .FirstOrDefaultAsync(b =>
-                    b.Id == id &&
-                    b.AppUserId == userId);
+            var reservation = await _db.SeatReservations
+                .FirstOrDefaultAsync(r =>
+                    r.Id == id &&
+                    r.AppUserId == userId);
 
-            if (booking == null)
-                return NotFound("Booking not found.");
-
-            if (booking.Status == "Cancelled")
-                return BadRequest(
-                    "Booking is already cancelled."
-                );
-
-            if (booking.Status == "Expired")
-                return BadRequest(
-                    "This booking has already expired."
-                );
-
-            var wasConfirmed =
-                booking.Status == "Confirmed";
-
-            booking.Status = "Cancelled";
-            booking.BoardingToken = null;
-            booking.AttendanceConfirmed = false;
-
-            // If a confirmed booking is cancelled,
-            // give the seat to the next student in the queue.
-            if (wasConfirmed)
+            if (reservation != null)
             {
-                await PromoteNextStudent(
-                    booking.ScheduledTripId
-                );
+                if (reservation.Status == ReservationStatus.Cancelled)
+                    return BadRequest("Booking is already cancelled.");
+
+                if (reservation.Status == ReservationStatus.Expired)
+                    return BadRequest("This booking has already expired.");
+
+                var wasConfirmed =
+                    reservation.Status == ReservationStatus.Confirmed;
+
+                reservation.Status = ReservationStatus.Cancelled;
+                reservation.CancelledAt = DateTime.UtcNow;
+
+                if (wasConfirmed)
+                {
+                    await PromoteNextStudent(reservation.TripId);
+                }
+
+                await _db.SaveChangesAsync();
+
+                return NoContent();
             }
+
+            var queueEntry = await _db.ActiveQueues
+                .FirstOrDefaultAsync(q =>
+                    q.Id == id &&
+                    q.AppUserId == userId &&
+                    q.Status == QueueEntryStatus.Waiting);
+
+            if (queueEntry == null)
+                return NotFound("Booking or queue position not found.");
+
+            queueEntry.Status = QueueEntryStatus.Cancelled;
 
             await _db.SaveChangesAsync();
 
@@ -262,178 +306,198 @@ namespace Madibaz_Transit_BackEnd.Controllers
 
         // Get one booking belonging to the logged-in student
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetBooking(int id)
+        public async Task<IActionResult> GetBooking(Guid id)
         {
-            var userId = int.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
+            var userId = GetUserId();
 
-            var booking = await _db.Bookings
-                .FirstOrDefaultAsync(b =>
-                    b.Id == id &&
-                    b.AppUserId == userId);
+            var reservation = await _db.SeatReservations
+                .FirstOrDefaultAsync(r =>
+                    r.Id == id &&
+                    r.AppUserId == userId);
 
-            if (booking == null)
-                return NotFound("Booking not found.");
+            if (reservation != null)
+            {
+                return Ok(await BuildBookingDto(
+                    reservation.Id,
+                    userId));
+            }
 
-            return Ok(
-                await BuildBookingDto(
-                    booking.Id,
-                    userId
-                )
-            );
+            var queueEntry = await _db.ActiveQueues
+                .Include(q => q.Trip)
+                    .ThenInclude(t => t.TransitRoute)
+                .FirstOrDefaultAsync(q =>
+                    q.Id == id &&
+                    q.AppUserId == userId);
+
+            if (queueEntry == null)
+                return NotFound("Booking or queue position not found.");
+
+            return Ok(new BookingDto
+            {
+                Id = queueEntry.Id,
+                TripId = queueEntry.TripId,
+                RouteName = queueEntry.Trip.TransitRoute.RouteName,
+                RouteCode = queueEntry.Trip.TransitRoute.RouteCode,
+                DepartureTime = queueEntry.Trip.ScheduledStart,
+                Status = "Queued",
+                BoardingToken = Guid.Empty.ToString(),
+                CreatedAt = queueEntry.JoinedAt,
+                QueuePosition = queueEntry.Position,
+                AttendanceConfirmed = false,
+                ConfirmationRequired = false
+            });
         }
 
-        // Automatically expire bookings that were not confirmed
-        // by 15 minutes before departure.
+        // Expire confirmed reservations that were not confirmed
+        // during the attendance confirmation window.
         [HttpPost("process-expired")]
         public async Task<IActionResult> ProcessExpiredBookings()
         {
             var now = DateTime.UtcNow;
 
-            var bookings = await _db.Bookings
-                .Include(b => b.ScheduledTrip)
-                .Where(b =>
-                    b.Status == "Confirmed" &&
-                    !b.AttendanceConfirmed &&
-                    b.ScheduledTrip.DepartureTime <=
-                        now.AddMinutes(15) &&
-                    b.ScheduledTrip.DepartureTime > now)
+            var reservations = await _db.SeatReservations
+                .Include(r => r.Trip)
+                .Where(r =>
+                    r.Status == ReservationStatus.Confirmed &&
+                    r.ConfirmedAt == null &&
+                    r.Trip.ScheduledStart <= now.AddMinutes(15) &&
+                    r.Trip.ScheduledStart > now)
                 .ToListAsync();
 
-            foreach (var booking in bookings)
+            foreach (var reservation in reservations)
             {
-                booking.Status = "Expired";
-                booking.BoardingToken = null;
-                booking.AttendanceConfirmed = false;
+                reservation.Status = ReservationStatus.Expired;
+                reservation.BoardingToken = Guid.Empty;
+                reservation.ExpiryReason =
+                    ReservationExpiryReason.NotConfirmed;
+                reservation.ExpiredAt = now;
 
-                await PromoteNextStudent(
-                    booking.ScheduledTripId
-                );
+                await PromoteNextStudent(reservation.TripId);
             }
 
             await _db.SaveChangesAsync();
 
             return Ok(new
             {
-                ExpiredBookings = bookings.Count
+                ExpiredBookings = reservations.Count
             });
         }
 
         // Promote the first queued student when a confirmed
         // booking becomes available.
-        private async Task PromoteNextStudent(
-            int scheduledTripId)
+        private async Task PromoteNextStudent(Guid tripId)
         {
-            var trip = await _db.ScheduledTrips
+            var trip = await _db.Trips
                 .Include(t => t.Bus)
-                .FirstOrDefaultAsync(
-                    t => t.Id == scheduledTripId
-                );
+                .FirstOrDefaultAsync(t => t.TripId == tripId);
 
             if (trip == null)
                 return;
 
-            var confirmedCount = await _db.Bookings
-                .CountAsync(b =>
-                    b.ScheduledTripId == scheduledTripId &&
-                    b.Status == "Confirmed");
+            var confirmedCount = await _db.SeatReservations
+                .CountAsync(r =>
+                    r.TripId == tripId &&
+                    (r.Status == ReservationStatus.Pending ||
+                     r.Status == ReservationStatus.Confirmed));
 
             if (confirmedCount >= trip.Bus.Capacity)
                 return;
 
-            var nextInQueue = await _db.Bookings
-                .Where(b =>
-                    b.ScheduledTripId == scheduledTripId &&
-                    b.Status == "Queued")
-                .OrderBy(b => b.CreatedAt)
+            var nextInQueue = await _db.ActiveQueues
+                .Where(q =>
+                    q.TripId == tripId &&
+                    q.Status == QueueEntryStatus.Waiting)
+                .OrderBy(q => q.Position)
+                .ThenBy(q => q.JoinedAt)
                 .FirstOrDefaultAsync();
 
             if (nextInQueue == null)
                 return;
 
-            nextInQueue.Status = "Confirmed";
+            var reservation = new SeatReservations
+            {
+                AppUserId = nextInQueue.AppUserId,
+                TripId = tripId,
+                Status = ReservationStatus.Confirmed,
+                ConfirmedAt = null,
+                BoardingToken = Guid.NewGuid(),
+                BoardingTokenUsed = false
+            };
 
-            nextInQueue.BoardingToken =
-                Guid.NewGuid().ToString("N");
+            _db.SeatReservations.Add(reservation);
 
-            nextInQueue.AttendanceConfirmed = false;
+            nextInQueue.Status = QueueEntryStatus.Promoted;
+
+            await RecalculateQueuePositions(tripId);
         }
 
-        // Builds the booking response used by the mobile application.
+        private async Task RecalculateQueuePositions(Guid tripId)
+        {
+            var waitingEntries = await _db.ActiveQueues
+                .Where(q =>
+                    q.TripId == tripId &&
+                    q.Status == QueueEntryStatus.Waiting)
+                .OrderBy(q => q.JoinedAt)
+                .ToListAsync();
+
+            for (var i = 0; i < waitingEntries.Count; i++)
+            {
+                waitingEntries[i].Position = i + 1;
+            }
+        }
+
         private async Task<BookingDto> BuildBookingDto(
-            int bookingId,
+            Guid bookingId,
             int userId)
         {
-            var booking = await _db.Bookings
-                .Include(b => b.ScheduledTrip)
+            var booking = await _db.SeatReservations
+                .Include(r => r.Trip)
                     .ThenInclude(t => t.TransitRoute)
-                .FirstAsync(b =>
-                    b.Id == bookingId &&
-                    b.AppUserId == userId);
+                .FirstAsync(r =>
+                    r.Id == bookingId &&
+                    r.AppUserId == userId);
 
-            var queuePosition =
-                booking.Status == "Queued"
-                    ? await _db.Bookings.CountAsync(b =>
-                        b.ScheduledTripId ==
-                            booking.ScheduledTripId &&
-                        b.Status == "Queued" &&
-                        b.CreatedAt <=
-                            booking.CreatedAt)
-                    : 0;
+            var queuePosition = 0;
+
+            var queueEntry = await _db.ActiveQueues
+                .FirstOrDefaultAsync(q =>
+                    q.AppUserId == userId &&
+                    q.TripId == booking.TripId &&
+                    q.Status == QueueEntryStatus.Waiting);
+
+            if (queueEntry != null)
+            {
+                queuePosition = queueEntry.Position;
+            }
 
             var now = DateTime.UtcNow;
 
-            // The student needs to confirm attendance
-            // only during the 30-to-15-minute window.
             var confirmationRequired =
-                booking.Status == "Confirmed" &&
-                !booking.AttendanceConfirmed &&
-                now >= booking.ScheduledTrip
-                    .DepartureTime
-                    .AddMinutes(-30) &&
-                now < booking.ScheduledTrip
-                    .DepartureTime
-                    .AddMinutes(-15);
+                booking.Status == ReservationStatus.Confirmed &&
+                booking.ConfirmedAt == null &&
+                now >= booking.Trip.ScheduledStart.AddMinutes(-30) &&
+                now < booking.Trip.ScheduledStart.AddMinutes(-15);
 
             return new BookingDto
             {
                 Id = booking.Id,
-
-                ScheduledTripId =
-                    booking.ScheduledTripId,
-
-                RouteName =
-                    booking.ScheduledTrip
-                        .TransitRoute
-                        .RouteName,
-
-                RouteCode =
-                    booking.ScheduledTrip
-                        .TransitRoute
-                        .RouteCode,
-
-                DepartureTime =
-                    booking.ScheduledTrip
-                        .DepartureTime,
-
-                Status = booking.Status,
-
-                BoardingToken =
-                    booking.BoardingToken,
-
-                CreatedAt =
-                    booking.CreatedAt,
-
-                QueuePosition =
-                    queuePosition,
-
-                AttendanceConfirmed =
-                    booking.AttendanceConfirmed,
-
-                ConfirmationRequired =
-                    confirmationRequired
+                TripId = booking.TripId,
+                RouteName = booking.Trip.TransitRoute.RouteName,
+                RouteCode = booking.Trip.TransitRoute.RouteCode,
+                DepartureTime = booking.Trip.ScheduledStart,
+                Status = booking.Status.ToString(),
+                BoardingToken = booking.BoardingToken.ToString(),
+                CreatedAt = booking.CreatedAt,
+                QueuePosition = queuePosition,
+                AttendanceConfirmed = booking.ConfirmedAt != null,
+                ConfirmationRequired = confirmationRequired
             };
+        }
+
+        private int GetUserId()
+        {
+            return int.Parse(
+                User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         }
     }
 }

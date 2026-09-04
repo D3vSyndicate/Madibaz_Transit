@@ -1,24 +1,24 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
 
 namespace Madibaz_Transit_BackEnd.Models.Entities
 {
-
     public class DriverShift
     {
-        public int Id { get; set; }
+        public Guid DriverShiftId { get; set; }
 
-        public int DriverId { get; set; }
+        public Guid DriverId { get; set; }
+        public Driver Driver { get; set; } = null!;
 
         public int BusId { get; set; }
+        public Bus Bus { get; set; } = null!;
 
-        public int RouteId { get; set; }
+        public Guid RouteId { get; set; }
+        public TransitRoute Route { get; set; } = null!;
 
-        public DateTime ShiftStart { get; set; }
+        public int ScheduleId { get; set; }
+        public Schedule Schedule { get; set; } = null!;
 
-        public DateTime? ShiftEnd { get; set; }
-
-        [Required]
-        public string ShiftStatus { get; set; } = "Active";
+        public DateTime ShiftDate { get; set; }
+        public string Status { get; set; } = string.Empty;
     }
 }
-

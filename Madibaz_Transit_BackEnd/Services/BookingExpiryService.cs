@@ -28,7 +28,6 @@ namespace Madibaz_Transit_BackEnd.Services
                     // one processing cycle encounters an error.
                 }
 
-                // Check every minute.
                 await Task.Delay(
                     TimeSpan.FromMinutes(1),
                     stoppingToken);
@@ -44,27 +43,32 @@ namespace Madibaz_Transit_BackEnd.Services
 
             var now = DateTime.UtcNow;
 
-            var bookings = await db.Bookings
-                .Include(b => b.ScheduledTrip)
-                .Where(b =>
-                    b.Status == "Confirmed" &&
-                    !b.AttendanceConfirmed &&
-                    b.ScheduledTrip.DepartureTime <=
-                        now.AddMinutes(15) &&
-                    b.ScheduledTrip.DepartureTime > now)
+            // Find confirmed reservations where the student
+            // has not confirmed attendance and departure is
+            // within the next 15 minutes.
+            var reservations = await db.SeatReservations
+                .Include(r => r.Trip)
+                .Where(r =>
+                    r.Status == ReservationStatus.Confirmed &&
+                    r.ConfirmedAt == null &&
+                    r.Trip.ScheduledStart <= now.AddMinutes(15) &&
+                    r.Trip.ScheduledStart > now)
                 .ToListAsync();
 
-            foreach (var booking in bookings)
+            foreach (var reservation in reservations)
             {
-                booking.Status = "Expired";
-                booking.BoardingToken = null;
+                var tripId = reservation.TripId;
 
-                await PromoteNextStudent(
-                    db,
-                    booking.ScheduledTripId);
+                reservation.Status = ReservationStatus.Expired;
+                reservation.BoardingToken = Guid.Empty;
+                reservation.ExpiredAt = now;
+                reservation.ExpiryReason =
+                    ReservationExpiryReason.NotConfirmed;
+
+                await PromoteNextStudent(db, tripId);
             }
 
-            if (bookings.Count > 0)
+            if (reservations.Count > 0)
             {
                 await db.SaveChangesAsync();
             }
@@ -72,38 +76,69 @@ namespace Madibaz_Transit_BackEnd.Services
 
         private async Task PromoteNextStudent(
             AppDbContext db,
-            int scheduledTripId)
+            Guid tripId)
         {
-            var trip = await db.ScheduledTrips
+            var trip = await db.Trips
                 .Include(t => t.Bus)
-                .FirstOrDefaultAsync(
-                    t => t.Id == scheduledTripId);
+                .FirstOrDefaultAsync(t => t.TripId == tripId);
 
             if (trip == null)
                 return;
 
-            var confirmedCount = await db.Bookings
-                .CountAsync(b =>
-                    b.ScheduledTripId == scheduledTripId &&
-                    b.Status == "Confirmed");
+            var reservedSeats = await db.SeatReservations
+                .CountAsync(r =>
+                    r.TripId == tripId &&
+                    (r.Status == ReservationStatus.Pending ||
+                     r.Status == ReservationStatus.Confirmed ||
+                     r.Status == ReservationStatus.Boarded));
 
-            if (confirmedCount >= trip.Bus.Capacity)
+            if (reservedSeats >= trip.Bus.Capacity)
                 return;
 
-            var nextStudent = await db.Bookings
-                .Where(b =>
-                    b.ScheduledTripId == scheduledTripId &&
-                    b.Status == "Queued")
-                .OrderBy(b => b.CreatedAt)
+            var nextStudent = await db.ActiveQueues
+                .Where(q =>
+                    q.TripId == tripId &&
+                    q.Status == QueueEntryStatus.Waiting)
+                .OrderBy(q => q.Position)
+                .ThenBy(q => q.JoinedAt)
                 .FirstOrDefaultAsync();
 
             if (nextStudent == null)
                 return;
 
-            nextStudent.Status = "Confirmed";
-            nextStudent.BoardingToken =
-                Guid.NewGuid().ToString("N");
-            nextStudent.AttendanceConfirmed = false;
+            var newReservation = new SeatReservations
+            {
+                Id = Guid.NewGuid(),
+                AppUserId = nextStudent.AppUserId,
+                TripId = tripId,
+                Status = ReservationStatus.Confirmed,
+                ConfirmedAt = null,
+                BoardingToken = Guid.NewGuid(),
+                BoardingTokenUsed = false
+            };
+
+            nextStudent.Status = QueueEntryStatus.Promoted;
+
+            db.SeatReservations.Add(newReservation);
+
+            await RecalculateQueuePositions(db, tripId);
+        }
+
+        private async Task RecalculateQueuePositions(
+            AppDbContext db,
+            Guid tripId)
+        {
+            var queue = await db.ActiveQueues
+                .Where(q =>
+                    q.TripId == tripId &&
+                    q.Status == QueueEntryStatus.Waiting)
+                .OrderBy(q => q.JoinedAt)
+                .ToListAsync();
+
+            for (int i = 0; i < queue.Count; i++)
+            {
+                queue[i].Position = i + 1;
+            }
         }
     }
 }

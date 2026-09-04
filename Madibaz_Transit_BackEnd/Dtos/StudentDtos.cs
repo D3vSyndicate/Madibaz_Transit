@@ -2,7 +2,7 @@ namespace Madibaz_Transit_BackEnd.Dtos
 {
     public class CreateBookingDto
     {
-        public int ScheduledTripId { get; set; }
+        public Guid TripId { get; set; }
     }
 
     public class ConfirmAttendanceDto
@@ -12,9 +12,9 @@ namespace Madibaz_Transit_BackEnd.Dtos
 
     public class BookingDto
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
 
-        public int ScheduledTripId { get; set; }
+        public Guid TripId { get; set; }
 
         public string RouteName { get; set; } = string.Empty;
 
@@ -32,8 +32,6 @@ namespace Madibaz_Transit_BackEnd.Dtos
 
         public bool AttendanceConfirmed { get; set; }
 
-        // True when the student should see the
-        // "Are you still coming?" confirmation.
         public bool ConfirmationRequired { get; set; }
     }
 }

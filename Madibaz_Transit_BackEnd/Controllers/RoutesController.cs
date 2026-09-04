@@ -20,25 +20,24 @@ namespace Madibaz_Transit_BackEnd.Controllers
         [HttpGet]
         public async Task<IActionResult> GetRoutes()
         {
-            var routes = await _db.TransitRoute
+            var routes = await _db.TransitRoutes
                 .Where(r => r.IsActive)
                 .Select(r => new
                 {
-                    r.Id,
+                    r.TransitRouteId,
                     r.RouteName,
                     r.RouteCode,
                     r.Description,
 
-                    Stops = _db.RouteStops
-                        .Where(rs => rs.TransitRouteId == r.Id)
-                        .OrderBy(rs => rs.StopOrder)
-                        .Select(rs => new
+                    Stops = r.BusStops
+                        .OrderBy(s => s.StopOrder)
+                        .Select(s => new
                         {
-                            rs.BusStopId,
-                            rs.StopOrder,
-                            StopName = rs.BusStop.StopName,
-                            rs.BusStop.Latitude,
-                            rs.BusStop.Longitude
+                            s.Id,
+                            s.StopOrder,
+                            StopName = s.StopName,
+                            s.Latitude,
+                            s.Longitude
                         })
                         .ToList()
                 })

@@ -1,19 +1,23 @@
-﻿namespace Madibaz_Transit_BackEnd.Models.Entities
+﻿using System;
+using System.Collections.Generic;
+
+namespace Madibaz_Transit_BackEnd.Models.Entities
 {
     public class Driver
     {
-        public int Id { get; set; }
+        public Guid DriverId { get; set; }
 
-        public string FirstName { get; set; } = string.Empty;
+        // AppUser relationship
+        public int AppUserId { get; set; }
+        public AppUser AppUser { get; set; } = null!;
 
-        public string LastName { get; set; } = string.Empty;
+        public string LicenseNumber { get; set; } = string.Empty;
 
-        public string EmployeeNumber { get; set; } = string.Empty;
+        public DateTime CreateAt { get; set; } = DateTime.UtcNow;
+        public DateTime? UpdatedAt { get; set; }
 
-        public string PhoneNumber { get; set; } = string.Empty;
-
-        public string Status { get; set; } = "Available";
-
-        public bool IsActive { get; set; } = true;
+        // Driver -> DriverShifts
+        public ICollection<DriverShift> DriverShifts { get; set; }
+            = new List<DriverShift>();
     }
 }
